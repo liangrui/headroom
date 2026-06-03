@@ -48,41 +48,44 @@ ReadCode/
 
 **分析目标**: 提供项目的全局视图，让读者快速理解整体架构
 
-**分析内容**:
-1. **项目定位与核心价值**
-   - Headroom 解决的问题：AI Agent 上下文窗口浪费
-   - 核心价值主张：60-95% token 节省，可逆压缩，本地优先
-   - 与竞品对比（RTK、lean-ctx、Compresr 等）
+**文章结构**:
 
-2. **技术栈全景**
-   - Python 主代码（headroom/ 包）
-   - Rust 高性能核心（crates/ 目录，4个 crate）
-   - TypeScript SDK（sdk/typescript/）
-   - Maturin 混合构建系统
-   - 依赖关系图：tiktoken、pydantic、litellm、click、fastapi 等
-
-3. **目录结构详解**
-   - `headroom/` — Python 核心包（30+ 子模块）
-   - `crates/` — Rust 实现（headroom-core、headroom-proxy、headroom-py、headroom-parity）
-   - `tests/` — 测试套件（200+ 测试文件）
-   - `wiki/` — 文档
-   - `docs/spec/` — 架构规范
-   - `REALIGNMENT/` — 架构对齐文档
-   - `benchmarks/` — 基准测试
-   - `examples/` — 示例代码
-   - `scripts/` — 工具脚本
-
-4. **系统架构图**
-   - 请求生命周期：Setup → Pre-Start → Post-Start → Input Received → Input Cached → Input Routed → Input Compressed → Input Remembered → Pre-Send → Post-Send → Response Received
-   - 核心组件关系图：ContentRouter → SmartCrusher/CodeCompressor/Kompress → CacheAligner → CCR
-   - 三种使用模式：Library（compress()）、Proxy（headroom proxy）、Agent Wrap（headroom wrap）
-
-5. **入口点分析**
-   - CLI 入口：`headroom.cli:main`
-   - 库 API：`from headroom import compress`
-   - 代理服务器：`headroom.proxy.server`
-   - MCP 服务器：`headroom.ccr.mcp_server`
-   - Rust PyO3 绑定：`headroom._core`
+> **总（概述）**
+> - Headroom 一句话定义：AI 上下文压缩层
+> - 🗺️ 图1-1: Headroom 知识脑图（mindmap）— 全局知识结构
+> - 🏗️ 图1-2: 系统架构总览图（flowchart）— 核心组件和数据流
+> - 三种使用模式概览：Library / Proxy / Agent Wrap
+> - 与竞品对比表
+>
+> **分（详细分析）**
+>
+> 1. **项目定位与核心价值**
+>    - Headroom 解决的问题：AI Agent 上下文窗口浪费
+>    - 核心价值主张：60-95% token 节省，可逆压缩，本地优先
+>
+> 2. **技术栈全景**
+>    - Python 主代码 + Rust 高性能核心 + TypeScript SDK
+>    - 📊 图1-3: 技术栈依赖关系图（flowchart）
+>    - Maturin 混合构建系统
+>
+> 3. **目录结构详解**
+>    - 各目录职责和规模
+>    - 🌳 图1-4: 目录结构树形图（flowchart）
+>
+> 4. **系统架构深度解析**
+>    - 请求生命周期全流程
+>    - 🔄 图1-5: 请求生命周期状态图（stateDiagram-v2）
+>    - 核心组件关系
+>    - 🔗 图1-6: 核心组件交互时序图（sequenceDiagram）
+>
+> 5. **入口点分析**
+>    - CLI / 库 API / 代理服务器 / MCP / Rust 绑定
+>
+> **总（总结）**
+> - 设计亮点：本地优先 + 可逆 + 插件化
+> - Headroom 在 AI 工具链中的定位
+> - 🎯 图1-7: Headroom 在 AI 工具生态中的位置（flowchart）
+> - 后续章节导航
 
 **涉及文件**:
 - `/workspace/README.md`
@@ -1045,21 +1048,77 @@ ReadCode/
 
 ---
 
+## 写作规范
+
+### 总分总结构
+
+每篇分析文章必须严格遵循**"总—分—总"**的三段式结构：
+
+1. **总（概述）**：开篇先给出模块的全景视图
+   - 一句话定义该模块是什么、解决什么问题
+   - 核心架构图/流程图（Mermaid）
+   - 关键设计决策概述
+   - 与其他模块的关系概览
+
+2. **分（详细分析）**：逐层深入每个子模块/组件
+   - 每个子模块独立成节，内部也遵循"总—分—总"
+   - 核心类/函数详解（含代码引用和关键代码片段）
+   - 设计模式和原理分析
+   - 数据流和控制流详解
+   - 关键算法实现细节
+   - 配图说明（Mermaid 图表）
+
+3. **总（总结）**：收束全篇，提炼核心要点
+   - 设计亮点与取舍
+   - 模块在整个系统中的定位和价值
+   - 与其他模块的协作关系总结
+   - 演进方向和改进空间
+
+### 图表配置要求
+
+每篇文章必须包含以下类型的 Mermaid 图表，以图文结合方式清晰呈现：
+
+| 图表类型 | 使用场景 | 最少数量 |
+|----------|---------|---------|
+| `flowchart` / `graph` | 架构图、模块关系图、数据流图 | 每篇至少 2 个 |
+| `sequenceDiagram` | 交互时序、请求处理流程 | 涉及多组件交互时至少 1 个 |
+| `classDiagram` | 类继承关系、接口设计 | 涉及类体系时至少 1 个 |
+| `stateDiagram-v2` | 状态机、生命周期 | 涉及状态转换时至少 1 个 |
+| `mindmap` | 知识结构、模块脑图 | 每篇开篇 1 个（概述部分） |
+
+**图表命名规范**：每个图表必须有标题，格式为 `图 X-Y: 描述`（X 为文章编号，Y 为图序号）
+
+**图表示例**：
+
+```mermaid
+graph TB
+    subgraph 图1-1: Headroom 系统架构
+        A[Agent/App] --> B[Headroom]
+        B --> C[ContentRouter]
+        C --> D[SmartCrusher]
+        C --> E[CodeCompressor]
+        C --> F[Kompress-base]
+        B --> G[CacheAligner]
+        B --> H[CCR]
+        B --> I[LLM Provider]
+    end
+```
+
+---
+
 ## 实施步骤
 
 1. **创建 ReadCode 目录**: `mkdir -p /workspace/ReadCode`
-2. **按顺序分析每个主题**，每个文件包含：
-   - 模块概述和职责
-   - 核心类/函数详解（含代码引用）
-   - 设计模式和原理
-   - 模块间交互关系
-   - 关键算法实现细节
-   - 数据流和控制流
+2. **按顺序分析每个主题**，每个文件严格遵循"总—分—总"结构：
+   - **总**：模块概述 + 架构图（mindmap）+ 核心流程图（flowchart）
+   - **分**：逐层深入每个子模块，配以类图、时序图、状态图
+   - **总**：设计总结 + 协作关系图 + 演进方向
 3. **每个文件确保**：
-   - 引用实际代码文件路径
+   - 引用实际代码文件路径（使用可点击链接）
    - 包含关键代码片段
    - 解释设计决策背后的原因
-   - 绘制模块关系和数据流
+   - 至少包含 3 个 Mermaid 图表
+   - 图文结合，以图辅文
 
 ## 验证步骤
 
@@ -1067,3 +1126,6 @@ ReadCode/
 - 确认代码引用路径正确
 - 确认设计原理解释准确
 - 确认模块间关系描述完整
+- 确认每篇文章遵循"总—分—总"结构
+- 确认每篇文章至少包含 3 个 Mermaid 图表
+- 确认图表标题命名规范一致
