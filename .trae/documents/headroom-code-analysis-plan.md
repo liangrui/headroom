@@ -104,40 +104,53 @@ ReadCode/
 
 **分析目标**: 深入理解 Headroom 的核心压缩流水线设计和实现
 
-**分析内容**:
-1. **Pipeline 架构**
-   - `PipelineStage` 枚举定义
-   - `PipelineEvent` 事件模型
-   - `PipelineExtension` 扩展点
-   - `ExtensionManager` 扩展管理器
-   - 事件驱动的设计模式
+**文章结构**:
 
-2. **压缩主流程**
-   - `compress()` 函数的完整执行路径
-   - `CompressionConfig` 配置模型
-   - `CompressionResult` 结果模型
-   - 压缩决策逻辑
-
-3. **Client 实现**
-   - `HeadroomClient` 类设计
-   - LLM 客户端包装模式
-   - 上下文管理和变换协调
-
-4. **Transform Pipeline**
-   - `TransformPipeline` 类
-   - 变换组件的注册和执行顺序
-   - 并行处理和卸载机制
-   - 变换结果聚合
-
-5. **CompressionPolicy**
-   - 压缩策略决策
-   - TOIN 门控逻辑
-   - 自适应大小调整（AdaptiveSizer）
-
-6. **Pipeline 生命周期钩子**
-   - `CompressionHooks` 三阶段钩子
-   - 预压缩、偏置计算、后压缩
-   - 自定义扩展机制
+> **总（概述）**
+> - 核心压缩流水线一句话定义：Headroom 的心脏，将原始内容经多阶段变换压缩为精简上下文
+> - 🗺️ 图2-1: 压缩流水线知识脑图（mindmap）— 全局知识结构
+> - 🏗️ 图2-2: 流水线核心架构图（flowchart）— 从输入到输出的完整数据流
+> - 关键设计决策：事件驱动 + 可插拔变换 + 策略门控
+> - 与其他模块的关系：下游被代理服务器/CCR/记忆系统调用，上游依赖压缩算法和缓存
+>
+> **分（详细分析）**
+>
+> 1. **Pipeline 架构**
+>    - `PipelineStage` 枚举定义与阶段划分
+>    - `PipelineEvent` 事件模型与事件驱动设计
+>    - `PipelineExtension` 扩展点与 `ExtensionManager` 扩展管理器
+>    - 📊 图2-3: Pipeline 事件驱动流程图（flowchart）
+>
+> 2. **压缩主流程**
+>    - `compress()` 函数的完整执行路径
+>    - `CompressionConfig` 配置模型与 `CompressionResult` 结果模型
+>    - 压缩决策逻辑与跳过条件
+>    - 🔄 图2-4: compress() 函数状态转换图（stateDiagram-v2）
+>
+> 3. **Client 实现**
+>    - `HeadroomClient` 类设计与 LLM 客户端包装模式
+>    - 上下文管理和变换协调机制
+>    - 🔗 图2-5: HeadroomClient 与 Pipeline 交互时序图（sequenceDiagram）
+>
+> 4. **Transform Pipeline**
+>    - `TransformPipeline` 类：变换组件的注册和执行顺序
+>    - 并行处理和卸载机制
+>    - 变换结果聚合策略
+>
+> 5. **CompressionPolicy**
+>    - 压缩策略决策与 TOIN 门控逻辑
+>    - `AdaptiveSizer` 自适应大小调整
+>    - 📊 图2-6: CompressionPolicy 决策流程图（flowchart）
+>
+> 6. **Pipeline 生命周期钩子**
+>    - `CompressionHooks` 三阶段钩子：预压缩、偏置计算、后压缩
+>    - 自定义扩展机制
+>
+> **总（总结）**
+> - 设计亮点：事件驱动解耦 + 策略门控灵活 + 钩子可扩展
+> - 流水线在 Headroom 中的定位：一切压缩操作的统一入口
+> - 🎯 图2-7: 流水线与各模块协作关系图（flowchart）
+> - 演进方向：Rust 加速 + 更细粒度的策略控制
 
 **涉及文件**:
 - `/workspace/headroom/pipeline.py`
@@ -157,41 +170,53 @@ ReadCode/
 
 **分析目标**: 深入理解 Proxy 模式的完整实现
 
-**分析内容**:
-1. **服务器架构**
-   - FastAPI 应用结构
-   - ASGI 中间件集成
-   - 请求拦截和处理流程
-   - WebSocket 代理支持
+**文章结构**:
 
-2. **代理模式**
-   - `ProxyMode` 枚举和模式切换
-   - 认证模式（AuthMode）
-   - 压缩决策（CompressionDecision）
-   - 内存决策（MemoryDecision）
-
-3. **请求处理**
-   - OpenAI/Anthropic API 路由
-   - 请求转发和响应流式处理
-   - 循环保护（LoopbackGuard）
-   - 阶段计时（StageTimer）
-
-4. **扩展系统**
-   - `ProxyExtensions` 扩展点
-   - 语义缓存（SemanticCache）
-   - 速率限制（RateLimiter）
-   - 请求日志（RequestLogger）
-   - 节省追踪（SavingsTracker）
-
-5. **Prometheus 指标**
-   - 请求计数和延迟
-   - 压缩比率指标
-   - 缓存命中率
-   - 阶段计时指标
-
-6. **Warmup 机制**
-   - 模型预热
-   - 首次请求优化
+> **总（概述）**
+> - 代理服务器一句话定义：Headroom 的网络入口，以透明代理模式拦截并压缩 LLM 请求
+> - 🗺️ 图3-1: 代理服务器知识脑图（mindmap）— 全局知识结构
+> - 🏗️ 图3-2: 代理服务器核心架构图（flowchart）— 请求拦截→压缩→转发的完整链路
+> - 关键设计决策：多模式代理 + 扩展点插件化 + 流式响应
+> - 与其他模块的关系：调用压缩流水线/缓存/CCR/记忆系统，被 CLI/Agent Wrap 启动
+>
+> **分（详细分析）**
+>
+> 1. **服务器架构**
+>    - FastAPI 应用结构与 ASGI 中间件集成
+>    - 请求拦截和处理流程
+>    - WebSocket 代理支持
+>    - 📊 图3-3: 服务器请求处理流程图（flowchart）
+>
+> 2. **代理模式**
+>    - `ProxyMode` 枚举和模式切换
+>    - 认证模式（AuthMode）与压缩决策（CompressionDecision）
+>    - 内存决策（MemoryDecision）
+>    - 📊 图3-4: 代理模式决策树（flowchart）
+>
+> 3. **请求处理**
+>    - OpenAI/Anthropic API 路由
+>    - 请求转发和响应流式处理
+>    - 循环保护（LoopbackGuard）与阶段计时（StageTimer）
+>    - 🔗 图3-5: 请求处理完整时序图（sequenceDiagram）
+>
+> 4. **扩展系统**
+>    - `ProxyExtensions` 扩展点设计
+>    - 语义缓存（SemanticCache）、速率限制（RateLimiter）
+>    - 请求日志（RequestLogger）、节省追踪（SavingsTracker）
+>
+> 5. **Prometheus 指标**
+>    - 请求计数和延迟、压缩比率指标
+>    - 缓存命中率、阶段计时指标
+>    - 📊 图3-6: 可观测性指标流转图（flowchart）
+>
+> 6. **Warmup 机制**
+>    - 模型预热与首次请求优化
+>
+> **总（总结）**
+> - 设计亮点：透明代理零侵入 + 多模式灵活切换 + 扩展点可插拔
+> - 代理服务器在 Headroom 中的定位：生产部署的核心入口
+> - 🎯 图3-7: 代理服务器与各模块协作关系图（flowchart）
+> - 演进方向：Rust Proxy（Phase C）+ 更完善的流式处理
 
 **涉及文件**:
 - `/workspace/headroom/proxy/server.py`
@@ -450,26 +475,46 @@ ReadCode/
 
 **分析目标**: 深入理解内容类型检测和路由机制
 
-**分析内容**:
-1. **ContentRouter（内容路由器）**
-   - 内容类型检测：JSON、代码、日志、搜索结果、HTML、纯文本
-   - 路由决策逻辑
-   - 与压缩算法的映射关系
+**文章结构**:
 
-2. **ContentDetector（内容检测器）**
-   - 基于规则的内容检测
-   - ML 内容检测（Magika）
-   - 检测信号和关键词
-
-3. **Masks（掩码）**
-   - 压缩掩码定义
-   - 掩码应用和恢复
-   - 压缩/解压缩对称性
-
-4. **TagProtector（标签保护器）**
-   - XML/HTML 标签保护
-   - 防止压缩破坏结构化标记
-   - 不变式保证
+> **总（概述）**
+> - 内容路由与检测模块一句话定义：智能识别内容类型并路由至最优压缩策略的决策引擎
+> - 🗺️ 图8-1: 内容路由与检测知识脑图（mindmap）— 模块知识结构全景
+> - 🏗️ 图8-2: 内容路由核心架构图（flowchart）— 检测→路由→压缩的数据流
+> - 关键设计决策：规则优先 vs ML 优先的检测策略选择
+> - 与压缩算法模块（07章）和流水线模块（02章）的协作关系
+>
+> **分（详细分析）**
+>
+> 1. **ContentRouter（内容路由器）**
+>    - 内容类型枚举：JSON、代码、日志、搜索结果、HTML、纯文本
+>    - 路由决策逻辑：类型→压缩算法映射表
+>    - 📊 图8-3: ContentRouter 路由决策流程图（flowchart）
+>    - 与 SmartCrusher / CodeCompressor 等算法的对接机制
+>
+> 2. **ContentDetector（内容检测器）**
+>    - 基于规则的快速检测：关键词、正则、结构特征
+>    - ML 内容检测（Magika）：深度学习内容分类
+>    - 📊 图8-4: 规则检测与 ML 检测的分层策略图（flowchart）
+>    - 检测信号聚合与置信度评分
+>
+> 3. **Masks（掩码）**
+>    - 压缩掩码定义与数据模型
+>    - 掩码应用（apply）和恢复（restore）的对称操作
+>    - 📊 图8-5: 掩码应用与恢复流程图（sequenceDiagram）
+>    - 压缩/解压缩的对称性保证
+>
+> 4. **TagProtector（标签保护器）**
+>    - XML/HTML 标签识别与保护机制
+>    - 防止压缩破坏结构化标记的不变式保证
+>    - 📊 图8-6: TagProtector 保护-压缩-恢复流程图（stateDiagram-v2）
+>    - 与 ContentRouter 的协作：先保护后路由
+>
+> **总（总结）**
+> - 设计亮点：规则+ML 双层检测策略的精度与性能平衡
+> - 模块定位：压缩流水线的"智能调度中心"
+> - 🎯 图8-7: 内容路由与上下游模块协作关系图（flowchart）
+> - 演进方向：更精细的内容类型分类、自适应路由策略
 
 **涉及文件**:
 - `/workspace/headroom/transforms/content_router.py`
@@ -485,35 +530,52 @@ ReadCode/
 
 **分析目标**: 深入理解 Rust 高性能核心的实现
 
-**分析内容**:
-1. **headroom-core crate**
-   - 模块结构：auth_mode、cache_control、compression、correlation、signals、tokenizer、transforms
-   - SmartCrusher Rust 实现
-   - DiffCompressor / LogCompressor Rust 实现
-   - Tokenizer trait 和 tiktoken/HuggingFace 后端
-   - CCR 存储层（内存/SQLite/Redis）
-   - BLAKE3 哈希键生成
+**文章结构**:
 
-2. **headroom-proxy crate**
-   - Axum HTTP 服务器
-   - 请求处理和转发
-   - Bedrock SigV4 签名
-   - Vertex GCP ADC 认证
-   - WebSocket 代理
-
-3. **headroom-py crate**
-   - PyO3 绑定
-   - Python 可调用函数导出
-   - 类型转换
-
-4. **headroom-parity crate**
-   - Python/Rust 实现奇偶校验
-   - 确保两端行为一致
-
-5. **构建和发布**
-   - Maturin 混合构建
-   - Release profile 优化（LTO、strip、codegen-units）
-   - Wheel 大小优化策略
+> **总（概述）**
+> - Rust 核心实现一句话定义：用 Rust 重写 Python 热路径，提供高性能压缩、代理和分词能力
+> - 🗺️ 图9-1: Rust 核心实现知识脑图（mindmap）— 四大 crate 及其职责全景
+> - 🏗️ 图9-2: Rust crates 架构与依赖关系图（flowchart）— core→proxy→py→parity 的层次关系
+> - 关键设计决策：Python→Rust 渐进式迁移策略
+> - 与 Python 层的交互方式：PyO3 绑定 + Maturin 构建
+>
+> **分（详细分析）**
+>
+> 1. **headroom-core crate**
+>    - 模块结构：auth_mode、cache_control、compression、correlation、signals、tokenizer、transforms
+>    - SmartCrusher Rust 实现：与 Python 版本的奇偶校验
+>    - DiffCompressor / LogCompressor Rust 实现
+>    - 📊 图9-3: headroom-core 内部模块关系图（flowchart）
+>    - Tokenizer trait 和 tiktoken/HuggingFace 后端
+>    - CCR 存储层（内存/SQLite/Redis）与 BLAKE3 哈希键生成
+>
+> 2. **headroom-proxy crate**
+>    - Axum HTTP 服务器架构
+>    - 请求处理和转发流程
+>    - 📊 图9-4: Rust Proxy 请求处理时序图（sequenceDiagram）
+>    - Bedrock SigV4 签名与 Vertex GCP ADC 认证
+>    - WebSocket 代理实现
+>
+> 3. **headroom-py crate**
+>    - PyO3 绑定机制与类型转换
+>    - Python 可调用函数导出
+>    - 📊 图9-5: PyO3 绑定调用链路图（flowchart）
+>    - 与 Maturin 构建系统的集成
+>
+> 4. **headroom-parity crate**
+>    - Python/Rust 实现奇偶校验框架
+>    - 确保两端行为一致的测试策略
+>
+> 5. **构建和发布**
+>    - Maturin 混合构建流程
+>    - Release profile 优化（LTO、strip、codegen-units）
+>    - Wheel 大小优化策略
+>
+> **总（总结）**
+> - 设计亮点：渐进式迁移策略保证稳定性，PyO3 桥接实现零成本抽象
+> - 模块定位：性能关键路径的 Rust 加速层
+> - 🎯 图9-6: Rust 核心与 Python 层协作关系图（flowchart）
+> - 演进方向：Python Retirement（Phase H），更多模块迁移至 Rust
 
 **涉及文件**:
 - `/workspace/crates/headroom-core/src/` (所有 .rs 文件)
@@ -747,28 +809,52 @@ ReadCode/
 
 **分析目标**: 深入理解监控和遥测系统
 
-**分析内容**:
-1. **OpenTelemetry 集成**
-   - Metrics 指标定义
-   - Tracing 分布式追踪
-   - OTLP 导出
+**文章结构**:
 
-2. **Prometheus 指标**
-   - 请求计数
-   - 压缩比率
-   - 缓存命中率
-   - 阶段计时
-
-3. **遥测系统**
-   - `TelemetryCollector` 收集器
-   - `TelemetryReporter` 报告器
-   - `TelemetryBeacon` 信标
-   - `TelemetryContext` 上下文
-   - TOIN 遥测集成
-
-4. **Dashboard**
-   - 实时监控面板
-   - SQL 查询和聚合
+> **总（概述）**
+> - 可观测性与遥测一句话定义：为 Headroom 提供全方位运行时可观测能力的监控与遥测子系统
+> - 🗺️ 图15-1: 可观测性与遥测知识脑图（mindmap）— 全局知识结构
+> - 🏗️ 图15-2: 可观测性架构总览图（flowchart）— 核心组件和数据流
+> - 三大支柱概览：Metrics / Tracing / Telemetry
+> - 与代理服务器、压缩流水线、CCR 等模块的关系
+>
+> **分（详细分析）**
+>
+> 1. **OpenTelemetry 集成**
+>    - Metrics 指标定义与采集
+>    - Tracing 分布式追踪与 Span 管理
+>    - OTLP 导出配置与管道
+>    - 📊 图15-3: OpenTelemetry 数据流图（flowchart）
+>
+> 2. **Prometheus 指标体系**
+>    - 请求计数与延迟直方图
+>    - 压缩比率指标（compression_ratio）
+>    - 缓存命中率指标（cache_hit_rate）
+>    - 阶段计时指标（stage_timer）
+>    - 📊 图15-4: Prometheus 指标采集与暴露流程（flowchart）
+>
+> 3. **遥测系统核心**
+>    - `TelemetryCollector` 收集器：聚合多源遥测数据
+>    - `TelemetryReporter` 报告器：格式化与上报
+>    - `TelemetryBeacon` 信标：轻量级心跳与状态广播
+>    - `TelemetryContext` 上下文：请求级遥测上下文传播
+>    - `TelemetryModels` 数据模型
+>    - 📊 图15-5: 遥测系统组件交互时序图（sequenceDiagram）
+>
+> 4. **TOIN 遥测集成**
+>    - TOIN（Token Optimization Intelligence Network）遥测数据上报
+>    - 遥测数据与压缩反馈的闭环
+>
+> 5. **Dashboard 监控面板**
+>    - 实时监控面板架构
+>    - SQL 查询与聚合逻辑
+>    - 可视化指标展示
+>
+> **总（总结）**
+> - 设计亮点：多层级可观测（进程级→请求级→操作级）、低开销采集
+> - 可观测性在 Headroom 系统中的定位：运维保障与性能优化的基石
+> - 🎯 图15-6: 可观测性模块协作关系图（flowchart）
+> - 演进方向：Rust 原生指标、更丰富的分布式追踪、自适应采样
 
 **涉及文件**:
 - `/workspace/headroom/observability/metrics.py`
